@@ -21,6 +21,7 @@ import (
 	neturl "net/url"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -1784,6 +1785,12 @@ func oneTurnConnectionLoop(ctx context.Context, turnParams *turnParams, peer *ne
 }
 
 func main() {
+	// iSH (iOS) runs a single-core x86 emulator; limit Go to one OS thread
+	// to avoid futex/scheduler issues on the emulated kernel.
+	if runtime.GOMAXPROCS(0) > 1 {
+		runtime.GOMAXPROCS(1)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	globalAppCancel = cancel
 	defer cancel()

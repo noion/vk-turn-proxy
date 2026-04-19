@@ -98,8 +98,8 @@ func main() {
 			}()
 			log.Printf("Connection from %s\n", conn.RemoteAddr())
 
-			// Perform the handshake with a 30-second timeout
-			ctx1, cancel1 := context.WithTimeout(ctx, 30*time.Second)
+			// Perform the handshake with a 3-minute timeout (VK TURN allocation takes 20-30s)
+			ctx1, cancel1 := context.WithTimeout(ctx, 3*time.Minute)
 			defer cancel1()
 
 			dtlsConn, ok := conn.(*dtls.Conn)
