@@ -355,7 +355,7 @@ func startCaptchaServer(srv *http.Server, logPrefix string) error {
 	var listening bool
 
 	for _, addr := range localCaptchaListenAddrs() {
-		listener, err := net.Listen("tcp", addr)
+		listener, err := platformListener(addr)
 		if err != nil {
 			listenErrs = append(listenErrs, fmt.Sprintf("%s (%v)", addr, err))
 			continue
