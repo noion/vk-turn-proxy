@@ -1,0 +1,29 @@
+# WireGuard config for the VPS SERVER (/etc/wireguard/wg0.conf)
+#
+# IMPORTANT: This is the SERVER-side config.
+# The client-side config (iOS/Android) is in example.conf
+#
+# WARNING: Do NOT put the Russian IP list in [Peer] AllowedIPs here!
+# AllowedIPs in the server [Peer] section controls:
+#   1. Which source IPs are accepted from this peer (ingress filter)
+#   2. Which destination IPs are routed via wg0 (kernel routing)
+# Setting a large AllowedIPs here causes the kernel to route VK TURN
+# addresses (155.212.193.x) through wg0, breaking the DTLS handshake.
+
+[Interface]
+PrivateKey = <server private key>
+Address = 10.0.0.1/24
+ListenPort = 51830
+# Replace ens3 with your actual network interface (ip link show)
+PostUp   = sysctl -w net.ipv4.ip_forward=1; \
+           iptables -A FORWARD -i wg0 -j ACCEPT; \
+           iptables -A FORWARD -o wg0 -j ACCEPT; \
+           iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; \
+           iptables -D FORWARD -o wg0 -j ACCEPT; \
+           iptables -t nat -D POSTROUTING -o ens3 -j MASQUERADE
+
+[Peer]  # iOS device
+PublicKey = <iOS client public key>
+# ONLY the tunnel IP — do NOT use the Russian IP list here!
+AllowedIPs = 10.0.0.9/32
