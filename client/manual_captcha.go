@@ -126,6 +126,16 @@ func rewriteProxyRequest(req *http.Request, targetURL *neturl.URL) {
 
 	req.Header.Del("Accept-Encoding")
 	req.Header.Del("TE") // Disable transfer encoding compression
+
+	// Remove browser security headers that expose the proxy to VK's rate-limiting.
+	// Sec-Fetch-* headers carry cross-origin context; X-Forwarded-* may leak the proxy IP.
+	for _, h := range []string{
+		"Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest", "Sec-Fetch-User",
+		"X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto",
+	} {
+		req.Header.Del(h)
+	}
+
 	for _, headerName := range []string{"Origin", "Referer"} {
 		if rewritten := rewriteProxyHeaderURL(req.Header.Get(headerName), targetURL); rewritten != "" {
 			req.Header.Set(headerName, rewritten)
