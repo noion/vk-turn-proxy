@@ -137,6 +137,7 @@ func handleUDPConnection(ctx context.Context, conn net.Conn, connectAddr string)
 			log.Printf("failed to close outgoing connection: %s", err)
 		}
 	}()
+	log.Printf("WG relay: DTLS %s <-> UDP %s", conn.RemoteAddr(), connectAddr)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -153,6 +154,7 @@ func handleUDPConnection(ctx context.Context, conn net.Conn, connectAddr string)
 		defer wg.Done()
 		defer cancel2()
 		buf := make([]byte, 1600)
+		var toWG uint64
 		for {
 			select {
 			case <-ctx2.Done():
@@ -167,6 +169,10 @@ func handleUDPConnection(ctx context.Context, conn net.Conn, connectAddr string)
 			if err1 != nil {
 				log.Printf("Failed: %s", err1)
 				return
+			}
+			toWG++
+			if toWG == 1 || toWG%100 == 0 {
+				log.Printf("WG relay: DTLS→wg0 pkt #%d (%d bytes)", toWG, n)
 			}
 
 			if err1 = serverConn.SetWriteDeadline(time.Now().Add(time.Minute * 30)); err1 != nil {
@@ -184,6 +190,7 @@ func handleUDPConnection(ctx context.Context, conn net.Conn, connectAddr string)
 		defer wg.Done()
 		defer cancel2()
 		buf := make([]byte, 1600)
+		var fromWG uint64
 		for {
 			select {
 			case <-ctx2.Done():
@@ -198,6 +205,10 @@ func handleUDPConnection(ctx context.Context, conn net.Conn, connectAddr string)
 			if err1 != nil {
 				log.Printf("Failed: %s", err1)
 				return
+			}
+			fromWG++
+			if fromWG == 1 || fromWG%100 == 0 {
+				log.Printf("WG relay: wg0→DTLS pkt #%d (%d bytes)", fromWG, n)
 			}
 
 			if err1 = conn.SetWriteDeadline(time.Now().Add(time.Minute * 30)); err1 != nil {
