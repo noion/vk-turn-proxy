@@ -14,7 +14,7 @@
 PrivateKey = <server private key>
 Address = 10.0.0.1/24
 ListenPort = 51830
-# Replace ens3 with your actual network interface (ip link show)
+# Option A: static interface name (replace ens3 with your interface: ip link show)
 PostUp   = sysctl -w net.ipv4.ip_forward=1; \
            iptables -A FORWARD -i wg0 -j ACCEPT; \
            iptables -A FORWARD -o wg0 -j ACCEPT; \
@@ -22,6 +22,18 @@ PostUp   = sysctl -w net.ipv4.ip_forward=1; \
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; \
            iptables -D FORWARD -o wg0 -j ACCEPT; \
            iptables -t nat -D POSTROUTING -o ens3 -j MASQUERADE
+
+# Option B: dynamic interface detection (works on any server)
+# PostUp = iptables -t nat -A POSTROUTING -o `ip route | awk '/default/ {print $5; exit}'` -j MASQUERADE
+# PostUp = ip rule add from `ip addr show $(ip route | awk '/default/ {print $5}') | awk '/inet / {print $2}' | head -1 | cut -d/ -f1` table main
+# PostDown = iptables -t nat -D POSTROUTING -o `ip route | awk '/default/ {print $5; exit}'` -j MASQUERADE
+# PostDown = ip rule del from `ip addr show $(ip route | awk '/default/ {print $5}') | awk '/inet / {print $2}' | head -1 | cut -d/ -f1` table main
+#
+# NOTE on "ip rule add from <VPS_IP> table main":
+# This does NOT fix the DTLS routing issue! When server-bin replies to
+# 155.212.193.48, the source IP is chosen AFTER the route lookup. The kernel
+# finds the route via wg0 (table 51820) first, then assigns source 10.0.0.1.
+# The "from <VPS_IP>" rule never matches. The ONLY fix is AllowedIPs = 10.0.0.9/32.
 
 [Peer]  # iOS device
 PublicKey = <iOS client public key>
